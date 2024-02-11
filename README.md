@@ -2,7 +2,7 @@
 ## Homework Assignment 3: Integer Programming Example---Algorithmic Redistricting
 Griffin Arnone, Anhua Cheng, & Bailey Scoville
 ## Objective
-Redistricting requires assigning each county to a district in a fair and equitable plan to ensure population balance (one-person-one-vote), district compactness, and equal representation across races within a state. The team aims to use integer programming to map voting districts in the state of Washington, where there are 39 counties and 10 legislative districts. 
+Redistricting requires assigning each county to a district in a fair and equitable plan to ensure population balance (one-person-one-vote), district compactness, and equal representation across races within a state. The team aims to use integer programming to map voting districts in the state of Washington, where there are 39 counties and 10 legislative districts. A full discussion of the models and results are included in this [paper](https://github.com/bscov/Group-3-Assignment-3/blob/main/MSDS460_Group3_HomeworkAssignment3.pdf).
 ## Data
 - County adjacency data was pulled from the [National Bureau of Economic Research website](https://www.nber.org/research/data/county-adjacency)
 - County demographic data was pulled from the [United States Census Bureau website](https://www.census.gov/topics/population.html)
@@ -28,6 +28,7 @@ King County, Pierce County, and Snohomish County, were not included in the progr
 - District 4: Chelan, Clallam, Clark, Columbia, Ferry, Garfield, Kittitas, Lincoln, Stevens
 - District 5: Asotin, Benton, Lewis, San Juan, Skamania, Thurston, Jefferson Wahkiakum
 - View the [assignment map](https://github.com/bscov/Group-3-Assignment-3/blob/main/Model_1_Map.png)
+- View the [redistricting plan table](https://github.com/bscov/Group-3-Assignment-3/blob/main/Model_1_RedistrictingPlan.png)
 ### Model 2 Assignments (% White Population Constraint): 
 - District 1: Lewis, Skamania, Grays Harbor, Klickitat, Spokane
 - District 2: Stevens, Walla Walla, Whatcom, Yakima, Grant, Columbia, Whitman
@@ -35,5 +36,6 @@ King County, Pierce County, and Snohomish County, were not included in the progr
 - District 4: Clark, Franklin, Pend Oreille, Chelan, San Juan, Kittitas
 - District 5: Ferry, Douglas, Thurston, Jefferson, Asotin, Clallam, Benton
 - View the [assignment map](https://github.com/bscov/Group-3-Assignment-3/blob/main/Model_2_Map.png)
+- View the [redistricting plan table](https://github.com/bscov/Group-3-Assignment-3/blob/main/Model_2_RedistrictingPlan.png)
 # Discussion
 Comparing these maps to the actual Washington district map visually illustrates the failure of both models’ adjacency constraints. In future iterations of the model, the group would explore tightening the adjacency constraint to two neighboring districts and consider the distribution of political party affiliation, Hispanic voters, and Asian voters to create a fair and equitable representation of the Washington voter population.
