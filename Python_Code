@@ -1,0 +1,364 @@
+#load libraries
+import pandas as pd
+import numpy as np
+import seaborn as sns
+import geopandas as gpd
+import matplotlib.pyplot as plt
+%matplotlib inline
+import pulp
+from pulp import LpProblem, LpVariable, LpMinimize, lpSum, value
+from plotnine import (ggplot, aes, geom_map, geom_text, geom_label, 
+                      ggtitle, element_blank, element_rect, 
+                      scale_fill_manual, theme_minimal, theme, coord_fixed, xlim, ylim) 
+import adjustText as aT
+import itertools
+import folium
+from folium import plugins
+
+# View all columns and rows
+pd.set_option('display.max_columns', None)
+pd.set_option('display.max_rows', 90)
+
+# Set up notebook to display multiple outputs in one cell
+from IPython.core.interactiveshell import InteractiveShell
+InteractiveShell.ast_node_interactivity = "all"
+
+# Load Datasets
+## County Adjacency Data
+
+adj_raw = pd.read_csv('county_adjacency2010.csv')
+adj_raw.head()
+adj_raw.info()
+
+#isolate Washington counties in adjacency matrix
+
+adj = adj_raw.loc[adj_raw['countyname'].str.contains(', WA')]
+adj['countyname'] = adj['countyname'].str[:-4]
+adj['neighborname'] = adj['neighborname'].str[:-4]
+adj.reset_index(drop = True, inplace = True)
+adj.info()
+adj.head()
+
+## Washington State Shapefile
+
+#read Washington shapefile
+shapefile_WA = gpd.read_file('WA_County_Boundaries.shp')
+shapefile_WA.head()
+
+## County Population Data
+
+#import csv of Washington county data (excluding King, Pierce, and Snohomish Counties)
+df = pd.read_csv('WA_Counties.csv')
+df.info()
+df.head()
+
+# Investigate Population Distribution
+
+#looking for population breakpoint in case we need to add a constraint to break up large counties
+plt.boxplot(df['Population'])
+
+# Integer Programming Model
+
+#define population bounds
+max_pop = 811034
+min_pop = 663573
+
+#define district limits
+max_districts = 5
+
+#create list of county names
+counties = list(df['County'])
+total_counties = len(counties)
+total_counties
+
+#create list of county populations
+county_pop = df['Population']
+len(county_pop)
+
+#create variable names for model
+var_names = [str(i) + str(j) for j in range(1, max_districts + 1) for i in range(1, total_counties + 1)]
+len(var_names)
+#import csv of Washington county data (excluding King, Pierce, and Snohomish Counties)
+df = pd.read_csv('WA_Counties.csv')
+df.info()
+df.head()
+
+#define minimization problem
+WA_Districts = LpProblem("Washington_Districting_Model", LpMinimize)
+
+#define variables
+
+#decision variable - groups of counties
+dv_group = LpVariable.matrix("Y", var_names, cat = "Binary")
+group = np.array(dv_group).reshape(36, 5)
+
+#decision variable - populations
+dv_pop = LpVariable.matrix("X", var_names, cat = "Integer", lowBound = 0)
+pop = np.array(dv_pop).reshape(36, 5)
+
+#decision variable - neighboring counties
+neighbors = LpVariable.dicts("Adj", [(i, j, k) for i in range(total_counties) 
+                                     for j in range(total_counties) for k in range(max_districts)], cat = "Binary")
+
+#objective function to minimize groupings of counties
+WA_obj_function = lpSum(group)
+WA_Districts += WA_obj_function
+
+#define constraints
+
+#entire county population must be used
+for i in range(total_counties):
+    for j in range(max_districts):
+        WA_Districts += lpSum(pop[i][j] for j in range(max_districts)) == county_pop[i], "Total Population" + str(i) + str(j)
+
+#every county must be in one district
+for i in range(total_counties):
+    for j in range(max_districts):
+        WA_Districts += pop[i][j] <= sum(county_pop)*group[i][j], "Group Population" + str(i) + str(j)
+
+#districts cannot be over/under min/max population bounds
+for j in range(max_districts):
+    WA_Districts += lpSum(pop[i][j] for i in range(total_counties)) <= max_pop, "District Population Maximum" + str(j)
+    WA_Districts += lpSum(pop[i][j] for i in range(total_counties)) >= min_pop, "District Population Minimum" + str(j)
+    
+#counties in districts must be adjacent
+for k in range(max_districts):
+    for i in range(total_counties):
+        for j in range(total_counties):
+            if i != j and (adj.loc[i, 'neighborname'] == adj.loc[j, 'neighborname']):
+                WA_Districts += neighbors[i, j, k] + neighbors[j, i, k] >= 2 * group[i][k]
+
+#solve objective function
+WA_Districts.solve()
+
+print("Optimal solution status:", pulp.LpStatus[WA_Districts.status])
+print("Objective value:", value(WA_obj_function))
+
+for i in range(total_counties):
+    for j in range(max_districts):
+        if pop[i][j].value() > 0:
+            print('County %d assigned to district %d: ' % (i, j), pop[i][j].value())
+
+## Create Model Results Dataframe
+
+districts_final = []
+for i in range(total_counties):
+    for j in range(max_districts):
+        var_output = {
+            'Python_County_Code': i + 1,
+            'District': j+1,
+            'Assignment': int(group[i][j].value()*(j+1)),
+            'Allocation': pop[i][j].value()}
+        districts_final.append(var_output)
+        
+results = pd.DataFrame(districts_final)
+results = results[results['Assignment'] != 0]
+results = results.sort_values(['Python_County_Code', 'District'])
+results.head()
+
+#merge results dataframe with population/county dataframe
+df1 = pd.merge(results, df, left_on = 'Python_County_Code', right_on = 'Python_County_Code', how = 'left')
+df1.head()
+
+#confirm district population bounds are met
+df2 = df1.groupby(['District'])['Population'].sum()
+df2
+
+## Create District Map
+
+shade_dict = { 1 : 'lightsteelblue',
+               2 : 'dodgerblue',
+               3 : 'royalblue',
+               4 : 'mediumblue',
+               5 : 'darkblue',
+               6 : 'grey',
+               12: 'grey', 13: 'grey', 14: 'grey', 15: 'grey', 16: 'grey',
+               21: 'grey', 23: 'grey', 24: 'grey', 25: 'grey', 26: 'grey',
+               31: 'grey', 32: 'grey', 34: 'grey', 35: 'grey', 36: 'grey',
+               41: 'grey', 42: 'grey', 43: 'grey', 45: 'grey', 46: 'grey',
+               51: 'grey', 52: 'grey', 53: 'grey', 54: 'grey', 56: 'grey',
+               61: 'grey', 62: 'grey', 63: 'grey', 64: 'grey', 65: 'grey'}
+
+def WA_map(map_data):
+    plot_district_map = (
+        ggplot(map_data)
+    + geom_map(aes(fill=str('Assignment')))
+    + theme_minimal()
+    + theme(axis_text_x=element_blank(),
+            axis_text_y=element_blank(),
+            axis_title_x=element_blank(),
+            axis_title_y=element_blank(),
+            axis_ticks=element_blank(),
+            panel_grid_major=element_blank(),
+            panel_grid_minor=element_blank(),
+            figure_size=(5, 4))
+    + xlim(-14000000, -13000000)
+    + ylim(5500000, 6500000)
+    + ggtitle('Washington County District Map')
+    + scale_fill_manual(values=shade_dict))
+        
+    return plot_district_map
+
+map_model1 = shapefile_WA.merge(df1, left_on='JURISDIC_3', right_on='County', suffixes=('_left', '_right'))
+map_model1['District'] = map_model1['District']+1
+map_model1_labels = map_model1
+map_model1_labels['District'] = map_model1_labels['District'].astype('category')
+map_model1_labels['Assignment'] = map_model1_labels['Assignment'].astype("category")
+
+WA_map(map_model1_labels)
+
+# Re-Run IP Model with Race Constraint
+
+#define population bounds
+max_pop = 811034
+min_pop = 663573
+
+#define district limits
+max_districts = 5
+
+#create list of county names
+counties = list(df['County'])
+total_counties = len(counties)
+total_counties
+
+#create list of county populations
+county_pop = df['Population']
+len(county_pop)
+
+#create variable names for model
+var_names = [str(i) + str(j) for j in range(1, max_districts + 1) for i in range(1, total_counties + 1)]
+len(var_names)
+
+#define minimization problem
+WA_Districts = LpProblem("Washington_Districting_Model", LpMinimize)
+
+#define variables
+
+#decision variable - groups of counties
+dv_group = LpVariable.matrix("Y", var_names, cat = "Binary")
+group = np.array(dv_group).reshape(36, 5)
+
+#decision variable - populations
+dv_pop = LpVariable.matrix("X", var_names, cat = "Integer", lowBound = 0)
+pop = np.array(dv_pop).reshape(36, 5)
+
+#decision variable - neighboring counties
+neighbors = LpVariable.dicts("Adj", [(i, j, k) for i in range(total_counties) 
+                                     for j in range(total_counties) for k in range(max_districts)], cat = "Binary")
+
+#decision variable - % white of population
+dv_white_pop = LpVariable.matrix("W", var_names, cat = "Continuous", lowBound = 0)
+white_pop = np.array(dv_white_pop).reshape(36, 5)
+
+#objective function to minimize groupings of counties
+WA_obj_function = lpSum(group)
+WA_Districts += WA_obj_function
+
+#define constraints
+
+#entire county population must be used
+for i in range(total_counties):
+    for j in range(max_districts):
+        WA_Districts += lpSum(pop[i][j] for j in range(max_districts)) == county_pop[i], "Total Population" + str(i) + str(j)
+
+#every county must be in one district
+for i in range(total_counties):
+    for j in range(max_districts):
+        WA_Districts += pop[i][j] <= sum(county_pop)*group[i][j], "Group Population" + str(i) + str(j)
+
+#districts cannot be over/under min/max population bounds
+for j in range(max_districts):
+    WA_Districts += lpSum(pop[i][j] for i in range(total_counties)) <= max_pop, "District Population Maximum" + str(j)
+    WA_Districts += lpSum(pop[i][j] for i in range(total_counties)) >= min_pop, "District Population Minimum" + str(j)
+    
+#add equal percentage white voters constraint
+for j in range(max_districts):
+    WA_Districts += lpSum(white_pop[i][j] for i in range(total_counties)) == lpSum(white_pop_percent[i] * pop[i][j] for i in range(total_counties)), "Equal White Population %" + str(j)    
+    
+#counties in districts must be adjacent
+for k in range(max_districts):
+    for i in range(total_counties):
+        for j in range(total_counties):
+            if i != j and (adj.loc[i, 'neighborname'] == adj.loc[j, 'neighborname']):
+                WA_Districts += neighbors[i, j, k] + neighbors[j, i, k] >= 2 * group[i][k]
+
+#solve objective function
+WA_Districts.solve()
+
+print("Optimal solution status:", pulp.LpStatus[WA_Districts.status])
+print("Objective value:", value(WA_obj_function))
+
+for i in range(total_counties):
+    for j in range(max_districts):
+        if pop[i][j].value() > 0:
+            print('County %d assigned to district %d: ' % (i, j), pop[i][j].value())
+
+## Create Model Results Dataframe
+
+districts_final = []
+for i in range(total_counties):
+    for j in range(max_districts):
+        var_output = {
+            'Python_County_Code': i + 1,
+            'District': j+1,
+            'Assignment': int(group[i][j].value()*(j+1)),
+            'Allocation': pop[i][j].value(),
+         'Percent White': white_pop[i][j].value()}
+        districts_final.append(var_output)
+        
+results = pd.DataFrame(districts_final)
+results = results[results['Assignment'] != 0]
+results = results.sort_values(['Python_County_Code', 'District'])
+results.head()
+
+#merge results dataframe with population/county dataframe
+df3 = pd.merge(results, df, left_on = 'Python_County_Code', right_on = 'Python_County_Code', how = 'left')
+df3 = df3.sort_values(by = ['Assignment'], ascending = False)
+df3.head()
+
+#confirm district population bounds are met
+df4 = df3.groupby(['District'])['Population'].sum()
+df4
+
+#compare with previous model without % white population constraint
+df2
+
+# Create District Map
+
+shade_dict = { 1 : 'lightsteelblue',
+               2 : 'dodgerblue',
+               3 : 'royalblue',
+               4 : 'mediumblue',
+               5 : 'darkblue',
+               6 : 'grey',
+               12: 'grey', 13: 'grey', 14: 'grey', 15: 'grey', 16: 'grey',
+               21: 'grey', 23: 'grey', 24: 'grey', 25: 'grey', 26: 'grey',
+               31: 'grey', 32: 'grey', 34: 'grey', 35: 'grey', 36: 'grey',
+               41: 'grey', 42: 'grey', 43: 'grey', 45: 'grey', 46: 'grey',
+               51: 'grey', 52: 'grey', 53: 'grey', 54: 'grey', 56: 'grey',
+               61: 'grey', 62: 'grey', 63: 'grey', 64: 'grey', 65: 'grey'}
+
+def WA_map(map_data):
+    plot_district_map = (
+        ggplot(map_data)
+    + geom_map(aes(fill=str('Assignment')))
+    + theme_minimal()
+    + theme(axis_text_x=element_blank(),
+            axis_text_y=element_blank(),
+            axis_title_x=element_blank(),
+            axis_title_y=element_blank(),
+            axis_ticks=element_blank(),
+            panel_grid_major=element_blank(),
+            panel_grid_minor=element_blank(),
+            figure_size=(5, 4))
+    + xlim(-14000000, -13000000)
+    + ylim(5500000, 6500000)
+    + ggtitle('Washington County District Map - % White Population')
+    + scale_fill_manual(values=shade_dict))
+        
+    return plot_district_map
+
+### Export Assignment Dataframes
+
+df1.to_csv('model1.csv', header=True, index=False)
+df3.to_csv('model2.csv', header=True, index=False)
