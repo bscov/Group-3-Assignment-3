@@ -27,7 +27,7 @@ King County, Pierce County, and Snohomish County, were not included in the progr
 - District 3: Adams, Cowlitz, Franklin, Kitsap, Walla Walla, Mason, Skagit
 - District 4: Chelan, Clallam, Clark, Columbia, Ferry, Garfield, Kittitas, Lincoln, Stevens
 - District 5: Asotin, Benton, Lewis, San Juan, Skamania, Thurston, Jefferson Wahkiakum
-- View the [assignment map](https://github.com/bscov/Group-3-Assignment-3/blob/main/Model_1_Map.png)
+- View the [assignment map](https://github.com/bscov/Group-3-Assignment-3/blob/main/Maps/Model_1_Map.png)
 - View the [redistricting plan table](https://github.com/bscov/Group-3-Assignment-3/blob/main/Model_1_RedistrictingPlan.png)
 ### Model 2 Assignments (% White Population Constraint): 
 - District 1: Lewis, Skamania, Grays Harbor, Klickitat, Spokane
@@ -36,6 +36,6 @@ King County, Pierce County, and Snohomish County, were not included in the progr
 - District 4: Clark, Franklin, Pend Oreille, Chelan, San Juan, Kittitas
 - District 5: Ferry, Douglas, Thurston, Jefferson, Asotin, Clallam, Benton
 - View the [assignment map](https://github.com/bscov/Group-3-Assignment-3/blob/main/Model_2_Map.png)
-- View the [redistricting plan table](https://github.com/bscov/Group-3-Assignment-3/blob/main/Model_2_RedistrictingPlan.png)
+- View the [redistricting plan table](https://github.com/bscov/Group-3-Assignment-3/blob/main/Maps/Model_2_RedistrictingPlan.png)
 # Discussion
 Comparing these maps to the actual Washington district map visually illustrates the failure of both models’ adjacency constraints. In future iterations of the model, the group would explore tightening the adjacency constraint to two neighboring districts and consider the distribution of political party affiliation, Hispanic voters, and Asian voters to create a fair and equitable representation of the Washington voter population.
