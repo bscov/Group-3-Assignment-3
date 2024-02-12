@@ -18,7 +18,7 @@ Minimize the number of counties assigned to each district
 - Counties added to a district must neighbor other counties in the same district
 - The districts must have equal percentages of white voters (added to the second model)
 ## Programming
-The integer programming code utilizes the Python PuLP library. Python code and output are included in the repository.
+The integer programming code utilizes the Python PuLP library. [Python code](https://github.com/bscov/Group-3-Assignment-3/blob/main/Python_Code.txt), [output](https://github.com/bscov/Group-3-Assignment-3/blob/main/Python_Output.txt), and a [PDF of code and output](https://github.com/bscov/Group-3-Assignment-3/blob/main/Python_Output.pdf) are included in the repository.
 ## Solution
 King County, Pierce County, and Snohomish County, were not included in the programming.
 ### Model 1 Assignments: 
