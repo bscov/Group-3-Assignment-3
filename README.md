@@ -35,7 +35,7 @@ King County, Pierce County, and Snohomish County, were not included in the progr
 - District 3: Wahkiakum, Skagit, Okanogan, Mason, Pacific, Adams, Lincoln, Kitsap, Island, Garfield, Cowlitz
 - District 4: Clark, Franklin, Pend Oreille, Chelan, San Juan, Kittitas
 - District 5: Ferry, Douglas, Thurston, Jefferson, Asotin, Clallam, Benton
-- View the [assignment map](https://github.com/bscov/Group-3-Assignment-3/blob/main/Model_2_Map.png)
-- View the [redistricting plan table](https://github.com/bscov/Group-3-Assignment-3/blob/main/Maps/Model_2_RedistrictingPlan.png)
+- View the [assignment map](https://github.com/bscov/Group-3-Assignment-3/blob/main/Maps/Model_2_Map.png)
+- View the [redistricting plan table](https://github.com/bscov/Group-3-Assignment-3/blob/main/Model_2_RedistrictingPlan.png)
 # Discussion
 Comparing these maps to the actual Washington district map visually illustrates the failure of both models’ adjacency constraints. In future iterations of the model, the group would explore tightening the adjacency constraint to two neighboring districts and consider the distribution of political party affiliation, Hispanic voters, and Asian voters to create a fair and equitable representation of the Washington voter population.
